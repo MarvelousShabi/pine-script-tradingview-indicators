@@ -50,7 +50,3 @@ This indicator is well-suited for virtually any trading style—including **intr
 
 ## License
 This project is licensed under the [MIT License](LICENSE).
-
-## View on TradingView
-You can find the public version of this indicator on TradingView:  
-🔗 [ACR - Average Candle Range With Targets](https://www.tradingview.com/script/DGTUR9I6-ACR-Average-Candle-Range-With-Targets/)
