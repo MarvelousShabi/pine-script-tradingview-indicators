@@ -1,0 +1,180 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © marvelouss25
+
+//@version=6
+indicator("ACR(Average Candle Range) With Targets", "ACR", overlay = true)
+
+// Table inputs
+var table_group = "Table Settings" // Creates group for all table inputs
+input_timeframe = input.timeframe(defval = "D", title = "Timeframe", group = table_group, inline = "T")
+candles_back = input.int(defval = 5, title = "", minval = 1, step = 1, tooltip = "How many candles back to calculate", group = table_group, inline = "T")
+acr_toggle = input.bool(defval = true, title = 'ACR', inline = "TBT", group = table_group)
+previous_candles_toggle = input.bool(defval = true, title = 'Previous Days', inline = "TBT", group = table_group)
+input_position = input.string(defval = "Top Right", title = "", inline = "TBT", group = table_group, 
+     options = ["Top Left", "Top Center", "Top Right", "Middle Left", "Middle Center", "Middle Right", "Bottom Left", "Bottom Center", "Bottom Right"])
+input_background_color = input.color(defval = color.white, title = "Backround Color", group = table_group)
+input_text_color =  input.color(defval = color.rgb(0, 0, 0), title = "Text Color", group = table_group)
+input_frame_border_width= input.int(defval = 1, title = "Frame & Border Width", minval = 1, group = table_group, inline = "FB")
+input_frame_border_color = input.color(defval = color.rgb(0, 0, 0), title = "", group = table_group, inline = "FB")
+
+// Sets string values to actual positional values
+position_strings_to_values = input_position ==  "Top Left"  ? position.top_left : 
+                             input_position ==  "Top Center" ? position.top_center :
+                             input_position ==  "Top Right" ? position.top_right :
+                             input_position ==  "Middle Left"  ? position.middle_left : 
+                             input_position ==  "Middle Center" ? position.middle_center :
+                             input_position ==  "Middle Right" ? position.middle_right :
+                             input_position ==  "Bottom Left"  ? position.bottom_left : 
+                             input_position ==  "Bottom Center" ? position.bottom_center :
+                             input_position ==  "Bottom Right" ? position.bottom_right :
+                             na
+
+// Checks what timeframe user selected and creates a string for it accordingly
+chosen_timeframe = input_timeframe == "" ? timeframe.period : input_timeframe
+timeframe_values_to_strings = str.contains(chosen_timeframe, "T") ? str.substring(chosen_timeframe, 0, 1) + "T":
+                              str.contains(chosen_timeframe, "S") ? str.substring(chosen_timeframe, 0, 1) + "s":
+                              not na(str.tonumber(chosen_timeframe)) and str.tonumber(chosen_timeframe) % 60 == 0 ? str.tostring(str.tonumber(chosen_timeframe) / 60) + "h":
+                              not na(str.tonumber(chosen_timeframe)) ? chosen_timeframe + "m":
+                              str.contains(chosen_timeframe, "D") ? chosen_timeframe:
+                              str.contains(chosen_timeframe, "W") ? chosen_timeframe:
+                              str.contains(chosen_timeframe, "M") ? chosen_timeframe:
+                              na
+
+// Calculates average range for specifed candles_back
+find_average() => math.sum((high - low)[1], candles_back) / candles_back
+candle_range_average = request.security(symbol = syminfo.tickerid, timeframe = input_timeframe, expression = find_average(), lookahead = barmerge.lookahead_on) // Applys average function to only daily chart
+rounded_average = math.round_to_mintick(candle_range_average) // Rounds candle average to closest tick value
+
+// Creates table to display ACR and 5 previous candles
+var table acr_table = table.new(position = position_strings_to_values, columns = 1, rows = 2, bgcolor = input_background_color, frame_color = input_frame_border_color,
+     frame_width = input_frame_border_width, border_color = input_frame_border_color, border_width = input_frame_border_width)
+
+// Calculates each candle range to use in table
+candle_range_one = request.security(symbol = syminfo.tickerid, timeframe = input_timeframe, expression = high[1]- low[1], lookahead = barmerge.lookahead_on)
+candle_range_two = request.security(symbol = syminfo.tickerid, timeframe = input_timeframe, expression = high[2]- low[2], lookahead = barmerge.lookahead_on)
+candle_range_three = request.security(symbol = syminfo.tickerid, timeframe = input_timeframe, expression = high[3]- low[3], lookahead = barmerge.lookahead_on)
+candle_range_four = request.security(symbol = syminfo.tickerid, timeframe = input_timeframe, expression = high[4]- low[4], lookahead = barmerge.lookahead_on)
+candle_range_five = request.security(symbol = syminfo.tickerid, timeframe = input_timeframe, expression = high[5]- low[5], lookahead = barmerge.lookahead_on)
+
+// Creates cells for table
+if acr_toggle
+    table.cell(acr_table, column = 0, row = 0, text = str.tostring(candles_back) + " " + timeframe_values_to_strings + " Candle ACR: " + str.tostring(rounded_average))
+if previous_candles_toggle
+    table.cell(acr_table, column = 0, row = 1, text = "Previous Candles: " + str.tostring(candle_range_one) + "   " + str.tostring(candle_range_two) + "   "  
+         + str.tostring(candle_range_three) + "   " + str.tostring(candle_range_four) + "   " + str.tostring(candle_range_five)) 
+
+// Inputs for bullish ACR target 
+var bullish = "Bullish Target Settings" // Creates group for all bullish target settings
+bullish_toggle = input.bool(defval = true, title = "", group = bullish, inline = "GBU")
+input_bullish_label = input.string(defval = "Bullish Target", title = "", group = bullish, inline = "GBU")
+input_bullish_extend = input.int(defval = 0, title = "", minval = 0, tooltip = "How many bars to extend the line past the current bar", group = bullish, inline = "GBU")
+input_bullish_line_style = input.string(defval = "Solid", title = "Style", options = ["Solid", "Dashed", "Dotted"], group = bullish, inline = "OBU")
+input_bullish_line_width =  input.int(defval = 1, title = "", group = bullish, inline = "OBU")
+input_bullish_line_color = input.color(defval = color.rgb(0, 0, 0), title = "", group = bullish, inline = "OBU")
+
+// Inputs for bearish ACR target 
+var bearish = "Bearish Target Settings" // Creates group for all bearish target settings
+bearish_toggle = input.bool(defval = true, title = "", group = bearish, inline = "GBR")
+input_bearish_label = input.string(defval = "Bearish Target", title = "", group = bearish, inline = "GBR")
+input_bearish_extend = input.int(defval = 0, title = "", minval = 0, tooltip = "How many bars to extend the line past the current bar", group = bearish, inline = "GBR")
+input_bearish_line_style = input.string(defval = "Solid", title = "Style", options = ["Solid", "Dashed", "Dotted"], group = bearish, inline = "OBR")
+input_bearish_line_width =  input.int(defval = 1, title = "", group = bearish, inline = "OBR")
+input_bearish_line_color = input.color(defval = color.rgb(0, 0, 0), title = "", group = bearish, inline = "OBR")
+
+//Inputs for vertical line at new candle
+var vertical_line = "Vertical Line Settings"
+vertical_line_toggle = input.bool(defval = true, title = "", group = vertical_line, inline = "VL")
+input_vertical_line_style = input.string(defval = "Dotted", title = "Style", options = ["Solid", "Dashed", "Dotted"], group = vertical_line, inline = "VL")
+input_vertical_line_width =  input.int(defval = 1, title = "", group = vertical_line, inline = "VL")
+input_vertical_line_color = input.color(defval = color.rgb(0, 0, 0), title = "", group = vertical_line, inline = "VL")
+
+// Sets string values to actual style values
+bullish_style_strings_to_values = input_bullish_line_style ==  "Solid"  ? line.style_solid : 
+                                  input_bullish_line_style ==  "Dashed" ? line.style_dashed :
+                                  input_bullish_line_style ==  "Dotted" ? line.style_dotted :
+                                  na
+
+bearish_style_strings_to_values = input_bearish_line_style ==  "Solid"  ? line.style_solid : 
+                                  input_bearish_line_style ==  "Dashed" ? line.style_dashed :
+                                  input_bearish_line_style ==  "Dotted" ? line.style_dotted :
+                                  na
+
+vertical_style_strings_to_values = input_vertical_line_style ==  "Solid"  ? line.style_solid : 
+                                   input_vertical_line_style ==  "Dashed" ? line.style_dashed :
+                                   input_vertical_line_style ==  "Dotted" ? line.style_dotted :
+                                   na
+
+// Declares variables used for ACR targets
+new_candle = request.security(symbol = syminfo.tickerid, timeframe = input_timeframe, expression = time, lookahead = barmerge.lookahead_on)
+is_new_candle = ta.change(new_candle) != 0 // Checks if new candle has been made
+var int open_bar = na
+var float candle_high = na
+var float candle_low = na
+var line bullish_target = na
+var line bearish_target = na
+var line open_line = na
+var label bullish_label = na
+var label bearish_label = na
+
+// Creates inital ACR targets
+if is_new_candle 
+    line.delete(bullish_target)
+    line.delete(bearish_target)
+    line.delete(open_line)
+    label.delete(bullish_label)
+    label.delete(bearish_label)
+    open_bar := bar_index
+    candle_high := high
+    candle_low := low
+    if bullish_toggle
+        bullish_target := line.new(first_point = chart.point.from_index(open_bar, candle_low + rounded_average), 
+             second_point = chart.point.from_index(bar_index, candle_low + rounded_average), color = input_bullish_line_color, 
+             width = input_bullish_line_width, style = bullish_style_strings_to_values)
+        bullish_label := label.new(chart.point.from_index(bar_index, candle_low + rounded_average), text = input_bullish_label, 
+             textcolor = input_bullish_line_color, style = label.style_label_left, color = color.rgb(255, 255, 255, 100))
+    if bearish_toggle
+        bearish_target := line.new(first_point = chart.point.from_index(open_bar, candle_high - rounded_average), 
+             second_point = chart.point.from_index(bar_index, candle_high - rounded_average), color = input_bearish_line_color, 
+             width = input_bearish_line_width, style = bearish_style_strings_to_values)
+        bearish_label := label.new(chart.point.from_index(bar_index, candle_high - rounded_average), text = input_bearish_label, 
+             textcolor = input_bearish_line_color, style = label.style_label_left, color = color.rgb(255, 255, 255, 100))
+    if vertical_line_toggle
+        open_line := line.new(first_point = chart.point.from_index(open_bar, high), 
+             second_point = chart.point.from_index(open_bar, low), color = input_vertical_line_color, 
+             width = input_vertical_line_width, style = vertical_style_strings_to_values, extend = extend.both)
+
+// Checks if candle low has changed and updates bullish target accordingly 
+if candle_low != request.security(symbol = syminfo.tickerid, timeframe = input_timeframe, expression = low, lookahead = barmerge.lookahead_on) 
+    line.delete(bullish_target)
+    label.delete(bullish_label) 
+    candle_low := request.security(symbol = syminfo.tickerid, timeframe = input_timeframe, expression = low, lookahead = barmerge.lookahead_on)
+    if bullish_toggle
+        bullish_target := line.new(first_point = chart.point.from_index(open_bar, candle_low + rounded_average), 
+             second_point = chart.point.from_index(bar_index, candle_low + rounded_average), color = input_bullish_line_color, 
+             width = input_bullish_line_width, style = bullish_style_strings_to_values)
+        bullish_label := label.new(chart.point.from_index(bar_index, candle_low + rounded_average), text = input_bullish_label, 
+             textcolor = input_bullish_line_color, style = label.style_label_left, color = color.rgb(255, 255, 255, 100))
+
+// Checks if candle high has changed and updates bearish target accordingly
+if candle_high != request.security(symbol = syminfo.tickerid, timeframe = input_timeframe, expression = high, lookahead = barmerge.lookahead_on)
+    line.delete(bearish_target)
+    label.delete(bearish_label)
+    candle_high := request.security(symbol = syminfo.tickerid, timeframe = input_timeframe, expression = high, lookahead = barmerge.lookahead_on)    
+    if bearish_toggle
+        bearish_target := line.new(first_point = chart.point.from_index(open_bar, candle_high - rounded_average), 
+             second_point = chart.point.from_index(bar_index, candle_high - rounded_average), color = input_bearish_line_color, 
+             width = input_bearish_line_width, style = bearish_style_strings_to_values)
+        bearish_label := label.new(chart.point.from_index(bar_index, candle_high - rounded_average), text = input_bearish_label, 
+             textcolor = input_bearish_line_color, style = label.style_label_left, color = color.rgb(255, 255, 255, 100))
+        
+// Ensures ACR targets are at current bar
+line.set_second_point(bullish_target, chart.point.from_index(bar_index, candle_low + rounded_average))
+line.set_second_point(bearish_target, chart.point.from_index(bar_index, candle_high - rounded_average))
+label.set_point(bullish_label, chart.point.from_index(bar_index, candle_low + rounded_average))
+label.set_point(bearish_label, chart.point.from_index(bar_index, candle_high - rounded_average))
+
+if input_timeframe == ""
+    line.set_second_point(bullish_target, chart.point.from_index(bar_index + input_bullish_extend, candle_low + rounded_average))
+    line.set_second_point(bearish_target, chart.point.from_index(bar_index + input_bearish_extend, candle_high - rounded_average))
+    label.set_point(bullish_label, chart.point.from_index(bar_index + input_bullish_extend, candle_low + rounded_average))
+    label.set_point(bearish_label, chart.point.from_index(bar_index + input_bearish_extend, candle_high - rounded_average))
