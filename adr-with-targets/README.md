@@ -42,7 +42,3 @@ This indicator is best suited for **intraday trading** and traders who want to e
 
 ## License
 This project is licensed under the [MIT License](LICENSE).
-
----
-
-Feel free to customize this further or let me know if you want me to help you add screenshots, badges, or other sections!
