@@ -1,0 +1,143 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © marvelouss25
+
+//@version=6
+indicator("ADR Up to 10 Days With Targets", "ADR", overlay = true)
+
+// Table inputs
+var table_group = "Table Settings" // Creates group for all table inputs
+days_back = input.int(defval = 5, title = "Days", minval = 1, maxval = 10, step = 1, tooltip = "How many days back you want to calculate", group = table_group)
+adr_toggle = input.bool(defval = true, title = 'ADR', inline = "TBT", group = table_group)
+previous_days_toggle = input.bool(defval = true, title = 'Previous Days', inline = "TBT", group = table_group)
+input_position = input.string(defval = "Top Right", title = "", inline = "TBT", group = table_group, 
+     options = ["Top Left", "Top Center", "Top Right", "Middle Left", "Middle Center", "Middle Right", "Bottom Left", "Bottom Center", "Bottom Right"])
+input_background_color = input.color(defval = color.white, title = "Backround Color", group = table_group)
+input_text_color =  input.color(defval = color.rgb(0, 0, 0), title = "Text Color", group = table_group)
+input_frame_border_width= input.int(defval = 1, title = "Frame & Border Width", minval = 1, group = table_group, inline = "FB")
+input_frame_border_color = input.color(defval = color.rgb(0, 0, 0), title = "", group = table_group, inline = "FB")
+
+// Sets string values to actual positional values
+position_strings_to_values = input_position ==  "Top Left"  ? position.top_left : 
+                             input_position ==  "Top Center" ? position.top_center :
+                             input_position ==  "Top Right" ? position.top_right :
+                             input_position ==  "Middle Left"  ? position.middle_left : 
+                             input_position ==  "Middle Center" ? position.middle_center :
+                             input_position ==  "Middle Right" ? position.middle_right :
+                             input_position ==  "Bottom Left"  ? position.bottom_left : 
+                             input_position ==  "Bottom Center" ? position.bottom_center :
+                             input_position ==  "Bottom Right" ? position.bottom_right :
+                             na
+
+// Calculates average range for specifed days_back
+find_average() => math.sum((high - low)[1], days_back) / days_back
+daily_range_average = request.security(symbol = syminfo.tickerid, timeframe = "D", expression = find_average(), lookahead = barmerge.lookahead_on) // Applys average function to only daily chart
+rounded_average = math.round_to_mintick(daily_range_average) // Rounds daily average to closest tick value
+
+// Creates table to display ADR and 5 previous days
+var table adr_table = table.new(position = position_strings_to_values, columns = 1, rows = 2, bgcolor = input_background_color, frame_color = input_frame_border_color,
+     frame_width = input_frame_border_width, border_color = input_frame_border_color, border_width = input_frame_border_width)
+
+// Calculates each day range to use in table
+day_range_one = request.security(symbol = syminfo.tickerid, timeframe = "D", expression = high[1]- low[1], lookahead = barmerge.lookahead_on)
+day_range_two = request.security(symbol = syminfo.tickerid, timeframe = "D", expression = high[2]- low[2], lookahead = barmerge.lookahead_on)
+day_range_three = request.security(symbol = syminfo.tickerid, timeframe = "D", expression = high[3]- low[3], lookahead = barmerge.lookahead_on)
+day_range_four = request.security(symbol = syminfo.tickerid, timeframe = "D", expression = high[4]- low[4], lookahead = barmerge.lookahead_on)
+day_range_five = request.security(symbol = syminfo.tickerid, timeframe = "D", expression = high[5]- low[5], lookahead = barmerge.lookahead_on)
+
+// Creates cells for table
+if adr_toggle
+    table.cell(adr_table, column = 0, row = 0, text = str.tostring(days_back) + " Day ADR: " + str.tostring(rounded_average))
+if previous_days_toggle
+    table.cell(adr_table, column = 0, row = 1, text = "Previous Days: " + str.tostring(day_range_one) + "   " + str.tostring(day_range_two) + "   "  
+         + str.tostring(day_range_three) + "   " + str.tostring(day_range_four) + "   " + str.tostring(day_range_five)) 
+
+// Inputs for bullish ADR target 
+var bullish = "Bullish Target Settings" // Creates group for all bullish target settings
+bullish_toggle = input.bool(defval = true, title = "", group = bullish, inline = "GBU")
+input_bullish_label = input.string(defval = "Bullish Target", title = "", group = bullish, inline = "GBU")
+input_bullish_line_style = input.string(defval = "Solid", title = "Style", options = ["Solid", "Dashed", "Dotted"], group = bullish, inline = "OBU")
+input_bullish_line_width =  input.int(defval = 1, title = "", group = bullish, inline = "OBU")
+input_bullish_line_color = input.color(defval = color.rgb(0, 0, 0), title = "", group = bullish, inline = "OBU")
+
+// Inputs for bearish ADR target 
+var bearish = "Bearish Target Settings" // Creates group for all bearish target settings
+bearish_toggle = input.bool(defval = true, title = "", group = bearish, inline = "GBR")
+input_bearish_label = input.string(defval = "Bearish Target", title = "", group = bearish, inline = "GBR")
+input_bearish_line_style = input.string(defval = "Solid", title = "Style", options = ["Solid", "Dashed", "Dotted"], group = bearish, inline = "OBR")
+input_bearish_line_width =  input.int(defval = 1, title = "", group = bearish, inline = "OBR")
+input_bearish_line_color = input.color(defval = color.rgb(0, 0, 0), title = "", group = bearish, inline = "OBR")
+
+// Sets string values to actual style values
+bullish_style_strings_to_values = input_bullish_line_style ==  "Solid"  ? line.style_solid : 
+                                  input_bullish_line_style ==  "Dashed" ? line.style_dashed :
+                                  input_bullish_line_style ==  "Dotted" ? line.style_dotted :
+                                  na
+
+bearish_style_strings_to_values = input_bearish_line_style ==  "Solid"  ? line.style_solid : 
+                                  input_bearish_line_style ==  "Dashed" ? line.style_dashed :
+                                  input_bearish_line_style ==  "Dotted" ? line.style_dotted :
+                                  na
+
+// Declares variables used for ADR targets
+is_new_day = ta.change(time("D")) != 0 // Checks if first candle of the new day has been made
+var int open_time = na  
+var int open_bar = na
+var float day_high = na
+var float day_low = na
+var line bullish_target = na
+var line bearish_target = na
+var label bullish_label = na
+var label bearish_label = na
+
+// Creates inital ADR targets
+if is_new_day 
+    line.delete(bullish_target)
+    line.delete(bearish_target)
+    label.delete(bullish_label)
+    label.delete(bearish_label)
+    open_time := time
+    open_bar := bar_index
+    day_high := high
+    day_low := low
+    if bullish_toggle
+        bullish_target := line.new(first_point = chart.point.from_index(open_bar, day_low + rounded_average), 
+             second_point = chart.point.from_index(bar_index, day_low + rounded_average), color = input_bullish_line_color, 
+             width = input_bullish_line_width, style = bullish_style_strings_to_values)
+        bullish_label := label.new(chart.point.from_index(bar_index, day_low + rounded_average), text = input_bullish_label, 
+             textcolor = input_bullish_line_color, style = label.style_label_left, color = color.rgb(255, 255, 255, 100))
+    if bearish_toggle
+        bearish_target := line.new(first_point = chart.point.from_index(open_bar,day_high - rounded_average), 
+             second_point = chart.point.from_index(bar_index, day_high - rounded_average), color = input_bearish_line_color, 
+             width = input_bearish_line_width, style = bearish_style_strings_to_values)
+        bearish_label := label.new(chart.point.from_index(bar_index, day_high - rounded_average), text = input_bearish_label, 
+             textcolor = input_bearish_line_color, style = label.style_label_left, color = color.rgb(255, 255, 255, 100))
+
+// Checks if daily low has changed and updates bullish target accordingly 
+if day_low != request.security(symbol = syminfo.tickerid, timeframe = "D", expression = low, lookahead = barmerge.lookahead_on) 
+    line.delete(bullish_target)
+    label.delete(bullish_label) 
+    day_low := request.security(symbol = syminfo.tickerid, timeframe = "D", expression = low, lookahead = barmerge.lookahead_on)
+    if bullish_toggle
+        bullish_target := line.new(first_point = chart.point.from_index(open_bar, day_low + rounded_average), 
+             second_point = chart.point.from_index(bar_index, day_low + rounded_average), color = input_bullish_line_color, 
+             width = input_bullish_line_width, style = bullish_style_strings_to_values)
+        bullish_label := label.new(chart.point.from_index(bar_index, day_low + rounded_average), text = input_bullish_label, 
+             textcolor = input_bullish_line_color, style = label.style_label_left, color = color.rgb(255, 255, 255, 100))
+
+// Checks if daily high has changed and updates bearish target accordingly
+if day_high != request.security(symbol = syminfo.tickerid, timeframe = "D", expression = high, lookahead = barmerge.lookahead_on)
+    line.delete(bearish_target)
+    label.delete(bearish_label)
+    day_high := request.security(symbol = syminfo.tickerid, timeframe = "D", expression = high, lookahead = barmerge.lookahead_on)    
+    if bearish_toggle
+        bearish_target := line.new(first_point = chart.point.from_index(open_bar,day_high - rounded_average), 
+             second_point = chart.point.from_index(bar_index, day_high - rounded_average), color = input_bearish_line_color, 
+             width = input_bearish_line_width, style = bearish_style_strings_to_values)
+        bearish_label := label.new(chart.point.from_index(bar_index, day_high - rounded_average), text = input_bearish_label, 
+             textcolor = input_bearish_line_color, style = label.style_label_left, color = color.rgb(255, 255, 255, 100))
+        
+// Ensures ADR targets are at current bar
+line.set_second_point(bullish_target, chart.point.from_index(bar_index, day_low + rounded_average))
+line.set_second_point(bearish_target, chart.point.from_index(bar_index, day_high - rounded_average))
+label.set_point(bullish_label, chart.point.from_index(bar_index, day_low + rounded_average))
+label.set_point(bearish_label, chart.point.from_index(bar_index, day_high - rounded_average))
